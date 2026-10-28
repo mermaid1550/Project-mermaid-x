@@ -1,0 +1,24 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+
+config_version=5
+
+[application]
+
+config/name="Lóng Chéng"
+config/description="Hybrid online multiplayer game & learning system - Phase 1 prototype (AI-Pet, Lobby UI)."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.3", "GL Compatibility")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
