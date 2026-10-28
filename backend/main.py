@@ -19,6 +19,7 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 OLLAMA_URL = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
@@ -31,6 +32,14 @@ SYSTEM_PROMPT = (
 )
 
 app = FastAPI(title="Lóng Chéng AI-Pet Backend", version="1.0")
+# Browser-Export (Web-Modus) läuft auf anderem Origin als dieser Server –
+# ohne diese Header blockiert der Browser jeden Pet-Request.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 # ---------------------------------------------------------------- Offline-Tutor
 VOCAB = [

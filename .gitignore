@@ -16,3 +16,8 @@
 backend/.venv/
 backend/e2e.log
 backend/__pycache__/
+
+# Web-Export (Build-Output, lokal regenerierbar via --export-debug "Web")
+web/index.*
+web/serve.log
+web/serve.pid
