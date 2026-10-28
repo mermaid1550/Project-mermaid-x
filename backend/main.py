@@ -1,7 +1,7 @@
 """Lóng Chéng AI-Pet Backend (Kapitel 5 der Master-Bible).
 
     Godot-Client --HTTP--> FastAPI (dieser Server) --> Ollama (lokal, frei)
-                                                    \--> lokaler Tutor (Fallback)
+                                                    --> lokaler Tutor (Fallback)
 
 Komplett freier Stack: FastAPI (MIT), Uvicorn (BSD), Ollama mit offenen
 Modellen (qwen2.5 / deepseek-r1, Apache/Llama-3-Lizenz) – keine API-Keys,
@@ -18,8 +18,9 @@ import os
 from typing import Any
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 OLLAMA_URL = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
@@ -73,6 +74,11 @@ _QUIZ: dict[str, dict[str, Any]] = {}
 
 class ChatRequest(BaseModel):
     prompt: str
+    user_id: str = "player_lux"
+
+
+class TTSRequest(BaseModel):
+    text: str
     user_id: str = "player_lux"
 
 
@@ -161,6 +167,66 @@ async def chat(req: ChatRequest) -> ChatReply:
     if reply:
         return ChatReply(reply=reply, source="ollama")
     return ChatReply(reply=_local_tutor(req.user_id, req.prompt), source="local")
+
+
+# ------------------------------------------------------------------ TTS (Coqui)
+_tts_engine = None  # lazy, damit der Server ohne Coqui-Installation startet
+_tts_loading = {"done": False}
+
+
+def _load_tts():
+    global _tts_engine
+    if _tts_loading["done"]:
+        return _tts_engine
+    _tts_loading["done"] = True
+    try:
+        from TTS.api import TTS  # coqui-tts (MIT)
+
+        # Deutsches Modell, passt zum Spiel-UI; bei Bedarf über TTS_MODEL ändern.
+        _tts_engine = TTS(model_name=os.environ.get("TTS_MODEL", "tts_models/de/thorsten/v2"))
+    except Exception as error:  # noqa: BLE001 – optionaler Dienst
+        print(f"TTS nicht verfügbar: {error}")
+        _tts_engine = None
+    return _tts_engine
+
+
+def _wav_bytes(samples, sample_rate: int) -> bytes:
+    """float-Samples [-1..1] -> 16-Bit-Mono-WAV (Standardbibliothek)."""
+    import struct
+    import wave
+
+    frames = b"".join(
+        struct.pack("<h", max(-32768, min(32767, int(s * 32767)))) for s in samples
+    )
+    from io import BytesIO
+
+    buffer = BytesIO()
+    with wave.open(buffer, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(frames)
+    return buffer.getvalue()
+
+
+@app.post("/v1/pet/tts")
+async def tts(req: TTSRequest) -> Response:
+    """Coqui-TTS → WAV. Ohne Installation 501 – der Client spielt stumm weiter."""
+    engine = _load_tts()
+    if engine is None:
+        return JSONResponse(
+            status_code=501,
+            content={"error": "Coqui TTS nicht installiert", "hint": "pip install coqui-tts"},
+        )
+    try:
+        import asyncio
+
+        samples = await asyncio.to_thread(engine.tts, text=req.text[:500])
+        rate = getattr(engine, "synthesizer", None)
+        sample_rate = rate.output_sample_rate if rate else 22050
+        return Response(content=_wav_bytes(samples, sample_rate), media_type="audio/wav")
+    except Exception as error:  # noqa: BLE001 – TTS darf den Chat nie blockieren
+        return JSONResponse(status_code=500, content={"error": str(error)})
 
 
 if __name__ == "__main__":

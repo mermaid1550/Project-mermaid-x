@@ -21,3 +21,7 @@ backend/__pycache__/
 web/index.*
 web/serve.log
 web/serve.pid
+
+# AI-Asset-Pipeline Arbeitsordner (Drop-Box + Zwischenbakes)
+tools/ai3d/inbox/
+assets/models/_bakes/
