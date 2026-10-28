@@ -10,6 +10,21 @@ const LoaderScript := preload("res://scripts/model_loader_3d.gd")
 var player: CharacterBody3D
 var pet: Node3D
 var loader: Node3D
+var city: Node3D
+
+# Stadt-Block aus der Asset-Pipeline (tools/ai3d/generate_buildings.py)
+const BUILDINGS := [
+	{"model": "house", "pos": Vector3(-9, 0, -10), "rot": 0},
+	{"model": "house", "pos": Vector3(-3, 0, -10), "rot": 0},
+	{"model": "house", "pos": Vector3(3, 0, -10), "rot": 0},
+	{"model": "house", "pos": Vector3(9, 0, -10), "rot": 0},
+	{"model": "house", "pos": Vector3(-6, 0, 10), "rot": 180},
+	{"model": "house", "pos": Vector3(0, 0, 10), "rot": 180},
+	{"model": "house", "pos": Vector3(6, 0, 10), "rot": 180},
+	{"model": "tower", "pos": Vector3(-18, 0, -4), "rot": 90},
+	{"model": "tower", "pos": Vector3(18, 0, 4), "rot": -90},
+]
+
 
 
 func _ready() -> void:
@@ -29,8 +44,7 @@ func _ready() -> void:
 	loader = LoaderScript.new()
 	loader.name = "ModelLoader"
 	add_child(loader)
-	# Pipeline-Ausgabe hier ablegen, z.B. aus TripoSR/Hunyuan3D:
-	loader.load_ai_generated_3d_model("res://assets/ai_models/pet.glb", Vector3.ZERO)
+	_spawn_city()
 
 	_build_ui()
 
@@ -81,3 +95,17 @@ func _build_ui() -> void:
 	back.position = Vector2(16, 16)
 	back.pressed.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/main.tscn"))
 	layer.add_child(back)
+
+
+## Stadt-Block: lädt Häuser/Türme aus der Asset-Pipeline inkl. Kollision.
+func _spawn_city() -> void:
+	var loaded_count := 0
+	for building in BUILDINGS:
+		var path := "res://assets/ai_models/%s.glb" % building["model"]
+		var pos: Vector3 = building["pos"]
+		var before := loader.get_child_count()
+		if loader.load_ai_generated_3d_model(path, pos):
+			var model: Node3D = loader.get_child(loader.get_child_count() - 1)
+			model.rotation_degrees.y = building["rot"]
+			loaded_count += 1
+	print("🏙️ Stadt-Block: %d/%d Gebäude geladen" % [loaded_count, BUILDINGS.size()])

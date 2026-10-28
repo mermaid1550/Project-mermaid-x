@@ -90,6 +90,12 @@ func _build_ui() -> void:
 	world_button.pressed.connect(_open_world_3d)
 	left.add_child(world_button)
 
+	var apartment_button := Button.new()
+	apartment_button.text = "🏠  Private Lobby (Apartments)"
+	apartment_button.custom_minimum_size = Vector2(0, 48)
+	apartment_button.pressed.connect(_open_apartment)
+	left.add_child(apartment_button)
+
 	# --- Rechte Spalte: AI-Pet-Chat ---
 	_chat = PetChatScript.new()
 	columns.add_child(_chat)
@@ -120,3 +126,7 @@ func _set_status(text: String) -> void:
 
 func _open_world_3d() -> void:
 	get_tree().change_scene_to_file("res://scenes/world_test_3d.tscn")
+
+
+func _open_apartment() -> void:
+	get_tree().change_scene_to_file("res://scenes/apartment_3d.tscn")
