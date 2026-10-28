@@ -11,3 +11,8 @@
 # OS / editor noise
 .DS_Store
 *.swp
+
+# Backend
+backend/.venv/
+backend/e2e.log
+backend/__pycache__/
