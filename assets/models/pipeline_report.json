@@ -1,33 +1,23 @@
 [
   {
-    "source": "tools/ai3d/inbox/machine.glb",
-    "output": "/workspace/chats/9d15f0135f0d4582d8a10f25/assets/models/machine_game.glb",
-    "objects": 6,
+    "source": "tools/ai3d/inbox/street_asset.obj",
+    "output": "/workspace/chats/9d15f0135f0d4582d8a10f25/assets/models/street_asset_game.glb",
+    "objects": 1,
     "cleanup": {
       "merged_verts": 0,
       "removed_faces": 0
     },
     "uv": {
-      "unwrapped": 6,
+      "unwrapped": 1,
       "skipped": 0
     },
     "tris": {
-      "before": 102,
-      "after": 102,
-      "decimated": 0
+      "before": 25264,
+      "after": 12000,
+      "decimated": 1
     },
-    "textures_assigned": [
-      "albedo",
-      "emission",
-      "metallic",
-      "normal",
-      "roughness"
-    ],
-    "textures_baked": {
-      "albedo": 6,
-      "roughness": 6,
-      "emission": 6
-    },
-    "seconds": 1.6
+    "textures_assigned": [],
+    "textures_baked": {},
+    "seconds": 0.4
   }
 ]

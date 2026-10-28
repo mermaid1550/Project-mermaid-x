@@ -25,3 +25,6 @@ web/serve.pid
 # AI-Asset-Pipeline Arbeitsordner (Drop-Box + Zwischenbakes)
 tools/ai3d/inbox/
 assets/models/_bakes/
+
+# Turntable-Rohläufe
+renders/*_0*.png

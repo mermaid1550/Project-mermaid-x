@@ -6,15 +6,16 @@ Zwei Ebenen:
 | Ebene | Tool | Lizenz | Braucht GPU? | Status |
 |---|---|---|---|---|
 | **Prozedural (sofort)** | `generate_buildings.py` (reines Python) | MIT (dieses Repo) | nein | ✅ funktioniert hier |
-| **AI Bild → 3D** | TripoSR | MIT | ja (≥8 GB VRAM) | 🔧 auf deinem Rechner |
-| **AI Text → 3D** | Hunyuan3D-2 (ComfyUI-Node) | MIT | ja | 🔧 auf deinem Rechner |
-| **AI Texturen** | ComfyUI + Stable Diffusion (SDXL-Turbo) | AGPL-3.0 / OpenRAIL | ja | 🔧 auf deinem Rechner |
-| **Rendern/Export** | Blender | GPL-3.0 | Optional | 🔧 auf deinem Rechner |
+| **AI Bild → 3D** | TripoSR | MIT | **nein, CPU reicht!** | ✅ **hier getestet: 55 s** |
+| **AI Text → 3D** | Hunyuan3D-2 (ComfyUI-Node) | MIT | ja (empfohlen) | 🔧 |
+| **AI Texturen** | ComfyUI + Stable Diffusion (SDXL-Turbo) | AGPL-3.0 / OpenRAIL | ja | 🔧 |
+| **Rendern/Export** | Blender | GPL-3.0 | nein (Cycles CPU) | ✅ **hier getestet** |
+| **Text-to-Speech** | Coqui TTS (de/thorsten/vits) | MIT | nein, CPU reicht | ✅ **hier getestet: 7,3 s/Satz** |
 
-> Warum „hier“ und „bei dir“? Diese Cloud-VM hat **keine GPU**. Leichte
-> prozedurale Generierung läuft sofort und ist getestet; schwere
-> AI-Inference installierst und startest du lokal. Die Pipelines sind
-> identisch – nur der Rechner wechselt.
+> **Wichtig – diese VM hat KEINE GPU, trotzdem lief alles:** echte Laufzeiten
+> aus diesen Läufen: TripoSR Bild→3D **55 s** (Inference alone 7 s),
+> Coqui TTS **7,3 s** pro Satz über den Live-Endpoint, Blender-Render
+> 1280×720 **~55 s**. Die drei Stolperfallen stehen unter Abschnitt 2.
 
 ## 1. Sofort nutzbar: prozedural erzeugen
 
@@ -41,20 +42,35 @@ cd TripoSR
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# Testbild (Beispiel aus dem Repo):
-python run.py example_data/1.png -o output/
+# CPU-Fall NUR mit --no-build-isolation (sonst findet pip torch nicht):
+grep -v torchmcubes requirements.txt > /tmp/rest.txt
+pip install -r /tmp/rest.txt
+pip install scikit-build-core ninja onnxruntime
+pip install --no-build-isolation "git+https://github.com/tatsy/torchmcubes.git"
 
-# Ergebnis: output/*.obj  →  nach GLB konvertieren:
-pip install trimesh
-python -c "import trimesh,sys; trimesh.load(sys.argv[1]).export(sys.argv[2])" \
-    output/1.obj output/house.glb
-
-# In das Spiel:
-cp output/house.glb /pfad/zu/lóng-chéng/assets/ai_models/
+# Eingabe: ein SAUBER freigestelltes Konzeptbild (Weißraum, Objekt zentriert)
+python tools/ai3d/triposr_cpu.py --image konzept.png \
+    --out tools/ai3d/inbox --name street_asset --mc-resolution 128
+# -> tools/ai3d/inbox/street_asset.obj
 ```
 
-In Godot ändert nichts: `ModelLoader3D.load_ai_generated_3d_model()` lädt
-die Datei, die Kollision entsteht automatisch aus der Bounding Box.
+**Die drei Stolperfallen, die wir hier ausgebessert haben (nachschlagen, bevor es bei dir hakt):**
+
+1. **`torchmcubes` baut nur mit `--no-build-isolation`** und `scikit-build-core`+
+   `ninja`+`cmake`. Sonst: `CMakeNotFoundError` bzw. „torch not found in build env".
+2. **oneDNN/mkldnn crasht mit SIGFPE** in vielen VMs/Containern – mitten in der
+   Convolution des VITS-Duration-Predictors (Coqui) bzw. der Netz-Layer.
+   Fix: `torch.backends.mkldnn.enabled = False` **vor** dem Modell-Import
+   (steht in `triposr_cpu.py` und im Backend `_load_tts()`).
+3. **Coqui-Modellname** heißt in coqui-tts ≥ 0.24 nicht mehr `de/thorsten/v2`,
+   sondern `tts_models/de/thorsten/vits` (Format: `typ/sprache/datensatz/modell`).
+   Zusätzlich braucht es **`espeak-ng` als Binary im PATH** (Phonisierung) –
+   ohne Root lokal bauen geht mit cmake aus dem Quellcode.
+
+**Qualitätshinweis aus der Praxis:** TripoSR ist extrem eingabebild-abhängig.
+Ein gedimmter Render mit dunklem Hintergrund gab ein lumpy, strukturloses
+Mesh. Für brauchbare Assets zählt ein **sauber freigestelltes Konzeptbild**
+mit Weißraum (siehe ComfyUI `rembg`-Node, Prompt-Bibliothek A1).
 
 ## 3. AI Text → 3D mit Hunyuan3D-2 über ComfyUI
 

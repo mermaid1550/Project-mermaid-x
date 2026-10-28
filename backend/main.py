@@ -180,10 +180,18 @@ def _load_tts():
         return _tts_engine
     _tts_loading["done"] = True
     try:
+        # oneDNN (mkldnn) crasht in manchen VMs/Containern mit SIGFPE in der
+        # Convolution des VITS-Duration-Predictors → vor dem Import deaktivieren.
+        import torch
+
+        torch.backends.mkldnn.enabled = False
+        torch.set_num_threads(max(1, (os.cpu_count() or 2) // 2))
+
         from TTS.api import TTS  # coqui-tts (MIT)
 
         # Deutsches Modell, passt zum Spiel-UI; bei Bedarf über TTS_MODEL ändern.
-        _tts_engine = TTS(model_name=os.environ.get("TTS_MODEL", "tts_models/de/thorsten/v2"))
+        # Namensformat in coqui-tts ≥ 0.24: <sprache>/<datensatz>/<modell>
+        _tts_engine = TTS(model_name=os.environ.get("TTS_MODEL", "tts_models/de/thorsten/vits"))
     except Exception as error:  # noqa: BLE001 – optionaler Dienst
         print(f"TTS nicht verfügbar: {error}")
         _tts_engine = None
@@ -221,6 +229,7 @@ async def tts(req: TTSRequest) -> Response:
     try:
         import asyncio
 
+        # Synthese läuft im Thread-Pool, damit der Server antwortbar bleibt.
         samples = await asyncio.to_thread(engine.tts, text=req.text[:500])
         rate = getattr(engine, "synthesizer", None)
         sample_rate = rate.output_sample_rate if rate else 22050
