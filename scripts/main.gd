@@ -84,6 +84,12 @@ func _build_ui() -> void:
 	hint.add_theme_color_override("font_color", Color(0.5, 0.55, 0.6))
 	left.add_child(hint)
 
+	var world_button := Button.new()
+	world_button.text = "🌆 3D-Testwelt betreten (Prototyp)"
+	world_button.custom_minimum_size = Vector2(0, 48)
+	world_button.pressed.connect(_open_world_3d)
+	left.add_child(world_button)
+
 	# --- Rechte Spalte: AI-Pet-Chat ---
 	_chat = PetChatScript.new()
 	columns.add_child(_chat)
@@ -110,3 +116,7 @@ func _on_room_changed(room: String) -> void:
 
 func _set_status(text: String) -> void:
 	_status.text = text
+
+
+func _open_world_3d() -> void:
+	get_tree().change_scene_to_file("res://scenes/world_test_3d.tscn")

@@ -12,6 +12,9 @@ signal peer_joined(peer_id: int)
 signal peer_left(peer_id: int)
 signal room_changed(room: String)
 
+## Lobby-Typen nach GDD (Kapitel 3) / Bible-Kapitel 6.4.
+enum ServerType { CLASSROOM, OPEN_WORLD, PRIVATE_ROOM }
+
 const DEFAULT_PORT := 24565
 const MAX_PLAYERS := 64  # Open-World-Hub-Grenze, Lobbys laufen darunter
 
@@ -69,6 +72,27 @@ func change_room(room: String) -> void:
 func _sync_room(room: String) -> void:
 	current_room = room
 	room_changed.emit(room)
+
+
+## Convenience-API nach Bible-Kapitel 6.4: nach Lobby-Typ verbinden.
+func join_lobby(type: ServerType, address: String = "127.0.0.1", port: int = DEFAULT_PORT) -> Error:
+	current_room = _room_for(type)
+	return join(address, port)
+
+
+func host_private_room(port: int = DEFAULT_PORT) -> Error:
+	current_room = _room_for(ServerType.PRIVATE_ROOM)
+	return host(port)
+
+
+func _room_for(type: ServerType) -> String:
+	match type:
+		ServerType.CLASSROOM:
+			return "classroom"
+		ServerType.PRIVATE_ROOM:
+			return "private"
+		_:
+			return "hub"
 
 
 func _bind_signals() -> void:
